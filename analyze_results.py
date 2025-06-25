@@ -6,7 +6,6 @@ import os
 import numpy as np
 import random
 
-# Конфигурация методов
 SEARCH_METHODS = {
     "LIKE": "LIKE",
     "ILIKE": "ILIKE",
@@ -18,7 +17,6 @@ SEARCH_METHODS = {
     "Hybrid": "Hybrid"
 }
 
-# Ручная настройка параметров БД
 DB_CONFIG = {
     'dbname': 'your_dbname',
     'user': 'your_username',
@@ -36,7 +34,6 @@ def generate_demo_performance_data():
     data = []
     for size in sizes:
         for method in methods:
-            # Генерация реалистичных значений
             base_time = random.uniform(0.5, 5)
             time = base_time * (size / 10000) ** 0.7 + random.uniform(-0.2, 0.5)
             results = int(50 * (size / 10000) * random.uniform(0.8, 1.2))
@@ -60,12 +57,10 @@ def generate_demo_metrics_data():
 
     data = []
     for method in methods:
-        # Генерация правдоподобных метрик
         precision = random.uniform(0.6, 0.99)
         recall = random.uniform(0.5, 0.95)
         f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
 
-        # Снижаем точность для некоторых методов
         if method in ["LIKE", "ILIKE"]:
             precision = random.uniform(0.6, 0.8)
             recall = random.uniform(0.7, 0.9)
@@ -89,11 +84,9 @@ def generate_demo_error_metrics():
     data = []
     for error_type in error_types:
         for method in methods:
-            # Базовые значения метрик
             precision = random.uniform(0.4, 0.95)
             recall = random.uniform(0.5, 0.9)
 
-            # Корректировка для разных типов ошибок
             if error_type == "Опечатка" and method in ["Levenshtein", "Trigram", "Hybrid"]:
                 precision = random.uniform(0.7, 0.95)
                 recall = random.uniform(0.8, 0.95)
@@ -119,7 +112,6 @@ def generate_demo_error_metrics():
 def load_benchmark_data():
     """Загрузка данных о производительности"""
     try:
-        # Пробуем подключиться к реальной БД
         conn = psycopg2.connect(**DB_CONFIG)
         query = """
                 SELECT method,
@@ -142,11 +134,9 @@ def load_benchmark_data():
 def calculate_precision_recall(search_term="laptop"):
     """Расчет метрик точности"""
     try:
-        # Пробуем подключиться к реальной БД
         conn = psycopg2.connect(**DB_CONFIG)
         cursor = conn.cursor()
 
-        # Упрощенный запрос для получения релевантных ID
         cursor.execute("""
                        SELECT id
                        FROM products
@@ -157,7 +147,6 @@ def calculate_precision_recall(search_term="laptop"):
 
         metrics = []
         for method in SEARCH_METHODS:
-            # Упрощенный запрос для получения результатов
             cursor.execute("""
                            SELECT product_id
                            FROM search_results
@@ -166,7 +155,6 @@ def calculate_precision_recall(search_term="laptop"):
                            """, (method, search_term))
             found_ids = {row[0] for row in cursor.fetchall()}
 
-            # Расчет метрик
             true_positives = len(relevant_ids & found_ids)
             precision = true_positives / len(found_ids) if found_ids else 0
             recall = true_positives / len(relevant_ids) if relevant_ids else 0
@@ -191,17 +179,14 @@ def calculate_precision_recall(search_term="laptop"):
 def calculate_metrics_by_error_type():
     """Расчет метрик по типам ошибок"""
     try:
-        # Пробуем подключиться к реальной БД
         conn = psycopg2.connect(**DB_CONFIG)
         cursor = conn.cursor()
 
-        # Упрощенный запрос для тестовых запросов
         cursor.execute("SELECT correct_term, typo_term, error_type FROM test_queries")
         test_queries = cursor.fetchall()
 
         metrics = []
         for correct_term, typo_term, error_type in test_queries:
-            # Релевантные ID для корректного термина
             cursor.execute("""
                            SELECT id
                            FROM products
@@ -211,7 +196,6 @@ def calculate_metrics_by_error_type():
             relevant_ids = {row[0] for row in cursor.fetchall()}
 
             for method in SEARCH_METHODS:
-                # Упрощенный запрос для результатов с опечаткой
                 cursor.execute("""
                                SELECT product_id
                                FROM search_results
@@ -220,7 +204,6 @@ def calculate_metrics_by_error_type():
                                """, (method, typo_term))
                 found_ids = {row[0] for row in cursor.fetchall()}
 
-                # Расчет метрик
                 true_positives = len(relevant_ids & found_ids)
                 precision = true_positives / len(found_ids) if found_ids else 0
                 recall = true_positives / len(relevant_ids) if relevant_ids else 0
@@ -248,10 +231,8 @@ def calculate_metrics_by_error_type():
 def generate_charts(df_perf, df_metrics, df_error_metrics):
     """Генерация графиков и диаграмм"""
     try:
-        # Создание папки для результатов
         os.makedirs("results", exist_ok=True)
 
-        # 1. График производительности
         plt.figure(figsize=(12, 6))
         sns.lineplot(
             data=df_perf,
@@ -269,7 +250,6 @@ def generate_charts(df_perf, df_metrics, df_error_metrics):
         plt.savefig('results/performance.png', bbox_inches='tight', dpi=150)
         plt.close()
 
-        # 2. График точности (F1-score)
         plt.figure(figsize=(10, 6))
         sns.barplot(
             data=df_metrics,
@@ -284,7 +264,6 @@ def generate_charts(df_perf, df_metrics, df_error_metrics):
         plt.savefig('results/accuracy.png', bbox_inches='tight', dpi=150)
         plt.close()
 
-        # 3. Heatmap использования индексов
         plt.figure(figsize=(10, 6))
         pivot_data = df_perf.pivot_table(
             index='method',
@@ -299,7 +278,6 @@ def generate_charts(df_perf, df_metrics, df_error_metrics):
         plt.savefig('results/index_usage.png', bbox_inches='tight', dpi=150)
         plt.close()
 
-        # 4. Точность по типам ошибок
         if not df_error_metrics.empty:
             plt.figure(figsize=(12, 7))
             sns.boxplot(
@@ -325,10 +303,8 @@ def generate_charts(df_perf, df_metrics, df_error_metrics):
 def generate_report(df_perf, df_metrics, df_error_metrics):
     """Генерация итогового отчета в виде CSV файлов"""
     try:
-        # Создание папки для результатов
         os.makedirs("results", exist_ok=True)
 
-        # Сохранение данных
         df_perf.to_csv('results/performance_data.csv', index=False)
         df_metrics.to_csv('results/accuracy_data.csv', index=False)
         df_error_metrics.to_csv('results/error_metrics_data.csv', index=False)
@@ -340,7 +316,6 @@ def generate_report(df_perf, df_metrics, df_error_metrics):
 
 
 if __name__ == "__main__":
-    # Загрузка данных
     print("Загрузка данных о производительности...")
     perf_data = load_benchmark_data()
 
@@ -350,7 +325,6 @@ if __name__ == "__main__":
     print("Анализ типов ошибок...")
     error_metrics = calculate_metrics_by_error_type()
 
-    # Подготовка данных для графиков
     if not metrics_data.empty:
         metrics_melted = metrics_data.melt(
             id_vars='method',
@@ -359,12 +333,10 @@ if __name__ == "__main__":
             value_name='value'
         )
 
-    # Генерация графиков
     print("Создание графиков...")
     if not perf_data.empty and not metrics_data.empty:
         generate_charts(perf_data, metrics_data, error_metrics)
 
-    # Генерация отчетов
     print("Формирование отчетов...")
     if not perf_data.empty and not metrics_data.empty and not error_metrics.empty:
         generate_report(perf_data, metrics_data, error_metrics)
